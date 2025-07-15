@@ -3,12 +3,14 @@ import { env } from "./infra/env";
 import { ZodError } from "zod";
 import { authRoutes } from "./presentation/http/routes/authRoutes";
 import { userRoutes } from "./presentation/http/routes/userRoutes";
+import { notasRoutes } from "./presentation/http/routes/notasRoutes";
 
 export const app = fastify();
 
 app.register(async (api) => {
     api.register(authRoutes, { prefix: '/auth' });
     api.register(userRoutes, { prefix: '/users' });
+    api.register(notasRoutes, { prefix: '/notas' })
 }, { prefix: '/api/v1' });
 
 app.setErrorHandler((error, request, reply) => {

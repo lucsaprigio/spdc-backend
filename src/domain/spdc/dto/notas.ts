@@ -1,4 +1,4 @@
-export interface IListByCnpjAndDateResponseDTO {
+export interface Notas {
     ITEN: number;
     E_S: string;
     CHAVE: string;
@@ -7,4 +7,5 @@ export interface IListByCnpjAndDateResponseDTO {
     MES: string;
     TOTAL_NOTA: number;
     DATA: string;
+    RAZAO_SOCIAL?: string;
 }
