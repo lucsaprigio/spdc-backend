@@ -9,3 +9,9 @@ export interface Notas {
     DATA: string;
     RAZAO_SOCIAL?: string;
 }
+
+export interface Count {
+    TOTAL: number;
+    MODELO: number;
+    DIA_MES: string
+}

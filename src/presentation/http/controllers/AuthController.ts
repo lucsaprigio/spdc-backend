@@ -25,7 +25,7 @@ export class AuthController {
 
         try {
             const { token, users } = await this.authenticate.execute(email, password);
-            return reply.status(201).send({ token, users });
+            return reply.status(200).send({ token, users });
         } catch (error) {
             if (error instanceof FirebirdError) {
                 return reply.status(error.statusCode).send({

@@ -52,7 +52,7 @@ class FirebirdService {
         })
     }
 
-    async executeQuery(query: string, params: any[]): Promise<[]> {
+    async executeQuery<T>(query: string, params: any[]): Promise<[]> {
         return new Promise<[]>((resolve, reject) => {
             firebird.attachOrCreate(this.options, (err, db) => {
                 if (err) {
