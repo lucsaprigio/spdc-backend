@@ -3,6 +3,7 @@ import { Count, Notas } from "@/domain/spdc/dto/notas";
 import { FirebirdService } from "../services/firebird.service";
 import { ICacheProvider } from "@/application/providers/ICacheProvider";
 import { ChartData, transformToChartData } from "@/core/shared/utils/transformToChartData";
+import { NfeSearchParams, NfeResponse, TotalByPeriodResponse, TotalsByPeriodParams, CountResponse } from "@/domain/spdc/types/nfe-filters";
 
 export class NotasRepository implements INotasRepository {
     constructor(
@@ -94,6 +95,163 @@ export class NotasRepository implements INotasRepository {
         } catch (error) {
             console.error('Erro ao buscar notas:', error);
             throw new Error('Falha ao consultar o banco de dados.');
+        }
+    }
+
+    async findByFilters(params: NfeSearchParams): Promise<NfeResponse | null> {
+        try {
+            const [data, count, totals] = await Promise.all([
+                this.findData(params),
+                this.countByStatus(params),
+                this.getTotalsByPeriod(params)
+            ])
+
+            const calculated = this.calculatedTotals(totals, count[0].COUNT);
+
+            return {
+                data,
+                count,
+                totals,
+                calculatedTotals: calculated
+            }
+        } catch (error) {
+            console.log(error);
+            throw new Error('Erro ao consultar banco de dados.');
+        }
+    }
+
+    private countByStatus({ cnpj, type, initialDate, finalDate, e_s }: NfeSearchParams): Promise<CountResponse[]> {
+        let sql = `
+                SELECT COUNT(*) FROM DB_LISTA_XML_GERAL
+                WHERE DB_LISTA_XML_GERAL.cnpj_nf = '${cnpj}'
+                AND E_S = '${e_s}'
+                AND MODELO = ${type}
+                AND DB_LISTA_XML_GERAL.EMISSAO_SEFAZ BETWEEN 
+                '${initialDate} 00:00:00' AND '${finalDate} 23:59:59'
+            `;
+
+        if (e_s === 'E') {
+            sql += ` AND DB_LISTA_XML_GERAL.INTEGRIDADE <> 2`
+        }
+
+        return this.firebirdService.executeTransaction<CountResponse[]>(sql, []);
+    }
+
+    private getTotalsByPeriod(params: NfeSearchParams) {
+        let sql = `
+                SELECT DB_LISTA_XML_GERAL.NOTA, DB_LISTA_XML_GERAL.STATUS,
+                SUM(COALESCE(DB_LISTA_XML_GERAL.total_nota, 0)) as total_nota
+                FROM DB_LISTA_XML_GERAL WHERE cnpj_nf = '${params.cnpj}'
+                AND E_S = '${params.e_s}'
+                AND MODELO = ${params.type}
+                AND DB_LISTA_XML_GERAL.EMISSAO_SEFAZ BETWEEN '${params.initialDate} 00:00:00' AND '${params.finalDate} 23:59:59'
+        `;
+        if (params.e_s === 'E') {
+            `AND DB_LISTA_XML_GERAL.INTEGRIDADE <> 2 `
+        }
+
+        if (params.serieNf) {
+            sql += ` AND serie = ${params.serieNf}`;
+        }
+
+        if (params.numberNf) {
+            sql += ` AND NOTA = ${params.numberNf}`;
+        }
+
+        if (params.razaoNf) {
+            sql += `AND RAZAO_SOCIAL LIKE '%${params.razaoNf.replace(/\+/g, ' ')}%'`
+        }
+
+        sql += `GROUP BY DB_LISTA_XML_GERAL.NOTA, DB_LISTA_XML_GERAL.STATUS`;
+
+        return this.firebirdService.executeTransaction(sql, []);
+    }
+
+    private findData(params: NfeSearchParams) {
+        const pageSize = 20;
+
+        const offset = (params.page - 1) * pageSize
+
+        let sql = `
+           SELECT FIRST ${pageSize} SKIP ${offset}
+                DISTINCT DB_LISTA_XML_GERAL.nota,
+                COALESCE(COUNT(*), 0) AS total_count,
+                DB_LISTA_XML_GERAL.e_s,
+                DB_LISTA_XML_GERAL.chave,
+                DB_LISTA_XML_GERAL.modelo,
+                COALESCE(DB_LISTA_XML_GERAL.serie, 0) as serie,
+                COALESCE(DB_LISTA_XML_GERAL.mes, 0) as mes,
+                COALESCE(DB_LISTA_XML_GERAL.total_nota, 0) total_nota,
+                DB_LISTA_XML_GERAL.EMISSAO_SEFAZ,
+                DB_LISTA_XML_GERAL.status,
+                DB_LISTA_XML_GERAL.DATA,
+                COALESCE(DB_LISTA_XML_GERAL.RAZAO_SOCIAL, 'Não identificado') as RAZAO_SOCIAL
+            FROM DB_LISTA_XML_GERAL
+            WHERE cnpj_nf = '${params.cnpj}'
+                AND E_S = '${params.e_s}'
+                AND MODELO = ${params.type}
+                AND DB_LISTA_XML_GERAL.EMISSAO_SEFAZ BETWEEN '${params.initialDate} 00:00:00' AND '${params.finalDate} 23:59:59'
+        `;
+
+        if (params.e_s === 'E') {
+            sql += `AND DB_LISTA_XML_GERAL.INTEGRIDADE <> 2`
+        }
+
+        if (params.serieNf) {
+            sql += ` AND serie = ${params.serieNf}`;
+        }
+
+        if (params.numberNf) {
+            sql += ` AND NOTA = ${params.numberNf}`;
+        }
+
+        if (params.razaoNf) {
+            sql += `AND RAZAO_SOCIAL LIKE '%${params.razaoNf.replace(/\+/g, ' ')}%'`
+        }
+
+        sql += `
+            GROUP BY
+                DB_LISTA_XML_GERAL.e_s,
+                DB_LISTA_XML_GERAL.chave,
+                DB_LISTA_XML_GERAL.modelo,
+                DB_LISTA_XML_GERAL.nota,
+                DB_LISTA_XML_GERAL.EMISSAO_SEFAZ,
+                DB_LISTA_XML_GERAL.serie,
+                DB_LISTA_XML_GERAL.mes,
+                DB_LISTA_XML_GERAL.total_nota,
+                DB_LISTA_XML_GERAL.status,
+                DB_LISTA_XML_GERAL.RAZAO_SOCIAL,
+                DB_LISTA_XML_GERAL.DATA
+            ORDER BY DB_LISTA_XML_GERAL.nota
+        `;
+
+        return this.firebirdService.executeTransaction(sql, []);
+    }
+
+    private calculatedTotals(total: TotalByPeriodResponse[], totalCount: number, pageSize = 20) {
+        const totalAut = parseFloat(total
+            .filter(item => item.STATUS === 'A')
+            .reduce((acc, item) => acc + item.TOTAL_NOTA, 0)
+            .toFixed(2)
+        )
+
+        const totalCanc = parseFloat(total
+            .filter(item => item.STATUS === 'C')
+            .reduce((acc, item) => acc + item.TOTAL_NOTA, 0)
+            .toFixed(2)
+        )
+
+        const countAut = total.filter(item => item.STATUS === 'A').length;
+        const countCanc = total.filter(item => item.STATUS === 'C').length;
+
+        const pageCount = Math.ceil(totalCount / pageSize);
+
+        return {
+            totalAut,
+            totalCanc,
+            countAut,
+            countCanc,
+            pageCount
         }
     }
 }

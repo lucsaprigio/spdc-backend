@@ -7,6 +7,8 @@ import { adapterFastifyRoute } from "../adapters/fastify-adapter";
 import { ListNotasByCnpjDateUseCase } from "@/application/use-cases/list-notas-by-cnpj-date";
 import { CountNotasController } from "../controllers/CountNotasController";
 import { CountNotasByCnpjUseCase } from "@/application/use-cases/count-notas-by-cnpj";
+import { FindByFiltersController } from "../controllers/FindByFiltersController";
+import { FindByFiltersUseCase } from "@/application/use-cases/find-by-filters";
 
 export async function notasRoutes(app: FastifyInstance) {
     const firebirdService = new FirebirdService();
@@ -19,6 +21,10 @@ export async function notasRoutes(app: FastifyInstance) {
     const countNotasByCnpjUseCase = new CountNotasByCnpjUseCase(notasRepository);
     const countNotasController = new CountNotasController(countNotasByCnpjUseCase);
 
+    const findByFiltersUseCase = new FindByFiltersUseCase(notasRepository);
+    const findByFiltersController = new FindByFiltersController(findByFiltersUseCase)
+
     app.get("/", adapterFastifyRoute(listNotasController));
     app.get("/count", adapterFastifyRoute(countNotasController));
+    app.get("/filter", adapterFastifyRoute(findByFiltersController));
 }

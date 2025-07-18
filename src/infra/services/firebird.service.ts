@@ -17,7 +17,7 @@ class FirebirdService {
         }
     }
 
-    async executeTransaction(ssql: string, params: any[]): Promise<[]> {
+    async executeTransaction<T>(ssql: string, params: any[]): Promise<[]> {
         return new Promise<[]>((resolve, reject) => {
             try {
                 firebird.attach(this.options, (err, db) => {
