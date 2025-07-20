@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start:dev": "tsx watch src/server.ts",
-    "start": "node build/server.js",
+    "start:prod": "node build/server.js",
     "build": "tsup src --out-dir build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -15,11 +15,12 @@
   "description": "",
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.0.10",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@types/node": "^24.0.10",
+    "@fastify/cors": "^11.0.1",
     "bcryptjs": "^3.0.2",
     "date-fns": "^4.1.0",
     "dotenv": "^17.0.1",

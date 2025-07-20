@@ -1,0 +1,11 @@
+services:
+  api-spdc:
+    build: .
+    container_name: api-spdc
+    ports:
+      - "3334:3334"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - .env

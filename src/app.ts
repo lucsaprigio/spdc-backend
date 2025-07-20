@@ -1,11 +1,19 @@
 import fastify from "fastify";
 import { env } from "./infra/env";
 import { ZodError } from "zod";
+import cors from '@fastify/cors'
 import { authRoutes } from "./presentation/http/routes/authRoutes";
 import { userRoutes } from "./presentation/http/routes/userRoutes";
 import { notasRoutes } from "./presentation/http/routes/notasRoutes";
 
 export const app = fastify();
+
+app.register(cors, {
+    origin: [
+        'http://localhost:3000',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+})
 
 app.register(async (api) => {
     api.register(authRoutes, { prefix: '/auth' });
