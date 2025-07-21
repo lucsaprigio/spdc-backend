@@ -2,14 +2,14 @@ import { User } from "@/domain/spdc/dto/users";
 import { env } from "@/infra/env";
 import { IAuthService } from "@/application/repositories/IAuthService";
 import { IUsersRepository } from "@/application/repositories/IUsersRepository";
-import { sign, verify } from "jsonwebtoken";
+import { sign } from "jsonwebtoken";
 
 export class JwtService implements IAuthService {
     private readonly jwtSecret = env.JWT_SECRET;
 
     constructor(
         private readonly userRepository: IUsersRepository
-    ) {}
+    ) { }
 
     async login(user: User): Promise<{ token: string, users: User[] | null }> {
         const token = sign(
