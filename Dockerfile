@@ -4,11 +4,13 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install && npm install tsup
+RUN npm install
 
 COPY . .
 
-RUN npm run build
+RUN echo ">>> Executando build..." && \
+    npm run build || (echo "!!! Build falhou" && exit 1) && \
+    ls -la /app/build  # Lista o conteúdo da pasta build
 
 EXPOSE 3334
 
