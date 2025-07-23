@@ -42,14 +42,14 @@ export class NotasRepository implements INotasRepository {
         return result as Notas[];
     }
 
-    async countByCnpjPerDay(cnpj: string, day: string) {
+    async countByCnpjPerDay(cnpj: string, day: string, dayAgo: number) {
         const formattedDate = day.replaceAll('/', '.');
 
         const [dayPart, monthPart, yearPart] = day.split('/');
         const currentDate = new Date(`${yearPart}-${monthPart}-${dayPart}`);
-        const sevenDaysAgo = new Date(currentDate);
-        sevenDaysAgo.setDate(currentDate.getDate() - 8);
-        const formattedSevenDaysAgo = `${sevenDaysAgo.getDate().toString().padStart(2, '0')}.${(sevenDaysAgo.getMonth() + 1).toString().padStart(2, '0')}.${sevenDaysAgo.getFullYear()}`;
+        const daysAgo = new Date(currentDate);
+        daysAgo.setDate(currentDate.getDate() - dayAgo);
+        const formatteddaysAgo = `${daysAgo.getDate().toString().padStart(2, '0')}.${(daysAgo.getMonth() + 1).toString().padStart(2, '0')}.${daysAgo.getFullYear()}`;
 
         const cacheKey = `countNotas${cnpj}:${day}`;
 
@@ -59,7 +59,7 @@ export class NotasRepository implements INotasRepository {
         }
 
         const sql = `
-                SELECT 
+            SELECT 
             COUNT(*) AS total,
             MODELO,
             EXTRACT(DAY FROM DTA_TRANS) || ' - ' || 
@@ -73,7 +73,7 @@ export class NotasRepository implements INotasRepository {
             DB_LISTA_XML_GERAL
         WHERE 
             CNPJ_NF = ?
-            AND DTA_TRANS BETWEEN '${formattedSevenDaysAgo}' AND '${formattedDate}'
+            AND DTA_TRANS BETWEEN '${formatteddaysAgo}' AND '${formattedDate}'
         GROUP BY 
             MODELO, 
             EXTRACT(DAY FROM DTA_TRANS),
@@ -175,6 +175,7 @@ export class NotasRepository implements INotasRepository {
         let sql = `
            SELECT FIRST ${pageSize} SKIP ${offset}
                 DISTINCT DB_LISTA_XML_GERAL.nota,
+                DB_LISTA_XML_GERAL.ITEN,
                 COALESCE(COUNT(*), 0) AS total_count,
                 DB_LISTA_XML_GERAL.e_s,
                 DB_LISTA_XML_GERAL.chave,
@@ -211,6 +212,7 @@ export class NotasRepository implements INotasRepository {
 
         sql += `
             GROUP BY
+                DB_LISTA_XML_GERAL.iten,
                 DB_LISTA_XML_GERAL.e_s,
                 DB_LISTA_XML_GERAL.chave,
                 DB_LISTA_XML_GERAL.modelo,

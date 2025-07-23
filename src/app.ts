@@ -10,10 +10,12 @@ export const app = fastify();
 
 app.register(cors, {
     origin: [
-        'http://localhost:3000',
-        'https://api.speedautomac.app.br:5445'
+        'https://api.speedautomac.app.br',
+        'https://api.speedautomac.app.br:5445',
     ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 })
 
 app.register(async (api) => {
