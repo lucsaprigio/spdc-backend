@@ -10,6 +10,7 @@ export const app = fastify();
 
 app.register(cors, {
     origin: [
+        'http://localhost:3000',
         'https://api.speedautomac.app.br',
         'https://api.speedautomac.app.br:5445',
     ],

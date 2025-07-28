@@ -1,20 +1,16 @@
+import { IController } from "@/application/repositories/IController";
 import { FindUserById } from "@/application/use-cases/find-user-by-id";
 import { FirebirdError } from "@/core/shared/errors/FirebirdError";
-import { NodeCacheProvider } from "@/infra/cache/NodeCacheProvider";
-import { UserRepository } from "@/infra/repositories/users-repository";
-import { FirebirdService } from "@/infra/services/firebird.service";
+import { User } from "@/domain/spdc/dto/users";
 import { FastifyReply, FastifyRequest } from "fastify";
 
-export class UserController {
-    private readonly usersRepository: UserRepository;
-    private readonly findUserById: FindUserById;
+export class FindUserByIdController implements IController<{ id: string }, User[] | null> {
+    constructor(
+        private findUserById: FindUserById
+    ) { }
 
-    constructor() {
-        const firebirdService = new FirebirdService;
-        const cacheProvider = new NodeCacheProvider(300);
-
-        this.usersRepository = new UserRepository(firebirdService, cacheProvider);
-        this.findUserById = new FindUserById(this.usersRepository);
+    async handle(request: { id: string }) {
+        return this.findUserById.execute(request.id);
     }
 
     async findUser(request: FastifyRequest, reply: FastifyReply) {

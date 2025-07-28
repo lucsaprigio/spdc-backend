@@ -13,9 +13,17 @@ interface IHttpResponse {
     body: any;
 }
 
-export function adapterFastifyRoute(
-    controller: IController<unknown, unknown>) {
-    return async (request: FastifyRequest, reply: FastifyReply) => {
+export class FastifyAdapter {
+
+    static handle(controller: IController<unknown, unknown>) {
+        return new FastifyAdapter(controller).execute;
+    }
+
+    constructor(private controller: IController<unknown, unknown>) {
+        this.execute = this.execute.bind(this);
+    }
+
+    private async execute(request: FastifyRequest, reply: FastifyReply) {
         try {
             const requestData = {
                 ...(request.body || {}),
@@ -23,11 +31,36 @@ export function adapterFastifyRoute(
                 ...(request.query || {})
             }
 
-            const response = await controller.handle(requestData);
-            reply.send(response)
+            const response = await this.controller.handle(requestData);
+
+            if (this.isXmlResponse(response)) {
+                const { file } = response;
+                const { chave } = request.params as any;
+
+                reply.header('Content-type', 'aplication/xml')
+                    .header('Content-Disposition', `attachment; filename="${chave}.xml"`)
+                    .send(file);
+            } else {
+                reply.send(response)
+            }
         } catch (error) {
-            console.log(error)
-            reply.status(500).send({ error: error })
+            this.handleError(error, reply);
         }
+    }
+
+    private isXmlResponse(response: unknown): response is { file: string } {
+        return (
+            typeof response === 'object' &&
+            response !== null &&
+            'file' in response &&
+            typeof (response as { file: unknown }).file === 'string'
+        );
+    }
+
+    private handleError(error: unknown, reply: FastifyReply) {
+        console.error('Adapter error: ', error);
+        reply.status(500).send({
+            error: error instanceof Error ? error.message : 'Internal Server Error'
+        })
     }
 }

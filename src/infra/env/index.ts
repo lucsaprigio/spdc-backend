@@ -8,6 +8,7 @@ const envSchema = z.object({
     DATABASE_URL: z.string(),
     DATABASE_PORT: z.coerce.number().default(3050),
     DATABASE_NAME: z.string(),
+    DATABASE_BLOB_NAME: z.string(),
     DATABASE_USER: z.string(),
     DATABASE_PASSWORD: z.string(),
 });

@@ -1,7 +1,7 @@
-import { IAuthService } from "@/application/repositories/IAuthService";
+import { IAuthService } from "@/domain/interfaces/IAuthService";
 import { IUsersRepository } from "@/application/repositories/IUsersRepository";
 
-export class Authenticate {
+export class AuthenticateUseCase{
     constructor(private authService: IAuthService, private usersRepository: IUsersRepository) { }
 
     async execute(email: string, password: string) {

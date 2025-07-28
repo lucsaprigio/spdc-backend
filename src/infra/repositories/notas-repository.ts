@@ -3,11 +3,13 @@ import { Count, Notas } from "@/domain/spdc/dto/notas";
 import { FirebirdService } from "../services/firebird.service";
 import { ICacheProvider } from "@/application/providers/ICacheProvider";
 import { ChartData, transformToChartData } from "@/core/shared/utils/transformToChartData";
-import { NfeSearchParams, NfeResponse, TotalByPeriodResponse, TotalsByPeriodParams, CountResponse } from "@/domain/spdc/types/nfe-filters";
+import { NfeSearchParams, NfeResponse, TotalByPeriodResponse, CountResponse } from "@/domain/spdc/types/nfe-filters";
+import { FirebirdBlobService } from "../services/firebird.blob.service";
 
 export class NotasRepository implements INotasRepository {
     constructor(
         private readonly firebirdService: FirebirdService,
+        private readonly firebirdBlobService: FirebirdBlobService,
         private readonly cacheProvider: ICacheProvider
     ) { }
 
@@ -228,6 +230,21 @@ export class NotasRepository implements INotasRepository {
         `;
 
         return this.firebirdService.executeTransaction(sql, []);
+    }
+
+    async downloadXmlByChave(chave: string) {
+        const sql = `
+                SELECT XML.ARQUIVO
+                FROM INDICE 
+                INNER JOIN XML ON INDICE.ITEN = XML.LANCAB
+                WHERE CHAVE = '${chave}' 
+        `
+
+        const result = await this.firebirdBlobService.executeQueryBlob<[{ ARQUIVO: string }]>(sql, []);
+
+        return {
+            file: result[0].ARQUIVO,
+        }
     }
 
     private calculatedTotals(total: TotalByPeriodResponse[], totalCount: number, pageSize = 20) {

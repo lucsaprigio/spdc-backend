@@ -1,14 +1,14 @@
 import { User } from "@/domain/spdc/dto/users";
 import { env } from "@/infra/env";
-import { IAuthService } from "@/application/repositories/IAuthService";
+import { IAuthService } from "@/domain/interfaces/IAuthService";
 import { IUsersRepository } from "@/application/repositories/IUsersRepository";
-import { sign } from "jsonwebtoken";
+import { sign, verify } from "jsonwebtoken";
 
 export class JwtService implements IAuthService {
     private readonly jwtSecret = env.JWT_SECRET;
 
     constructor(
-        private readonly userRepository: IUsersRepository
+        private readonly userRepository: IUsersRepository,
     ) { }
 
     async login(user: User): Promise<{ token: string, users: User[] | null }> {
@@ -26,14 +26,15 @@ export class JwtService implements IAuthService {
         }
     }
 
-    /*     async validateToken(token: string): Promise<Omit<User, 'SENHA_CLIENTE'>> {
-            // Regra de validação do token
-            try {
-                const decoded = verify(token, this.jwtSecret) as { id: string, email: string };
-    
-                
-            } catch (error) {
-    
+    async validateToken(token: string) {
+        try {
+            const payload = verify(token, this.jwtSecret) as User;
+            return { isValid: true, payload };
+        } catch (error) {
+            return {
+                isValid: false,
+                error: 'Token inválido'
             }
-        } */
+        }
+    }
 }
