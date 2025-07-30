@@ -55,23 +55,96 @@ class FirebirdService {
     async executeQuery<T>(query: string, params: any[]): Promise<[]> {
         return new Promise<[]>((resolve, reject) => {
             firebird.attachOrCreate(this.options, (err, db) => {
-                if (err) {
-                    db.detach();
-                    return reject(this.createFirebirdError(err, { info: "Erro ao conectar ao firebird" }));
-                }
-
-                db.query(query, params, (err, result) => {
+                try {
                     if (err) {
-                        return reject(this.createFirebirdError(err, { info: "Erro ao executar a query" }));
+                        return reject(this.createFirebirdError(err, { info: "Erro ao conectar ao firebird" }));
                     }
 
-                    return resolve(result as [])
-                })
+                    db.query(query, params, (err, result) => {
+                        if (err) {
+                            return reject(this.createFirebirdError(err, { info: "Erro ao executar a query" }));
+                        }
 
-                db.detach();
+                        return resolve(result as [])
+                    })
+
+                } finally {
+                    db.detach();
+                }
             })
         })
     }
+
+    async executeQueryBlob<T>(ssql: string, params: any): Promise<T> {
+        return new Promise<T>((resolve, reject) => {
+            firebird.attach(this.options, (err, db) => {
+
+                if (err)
+                    throw err;
+                db.transaction(firebird.ISOLATION_READ_COMMITTED, (err, transaction) => {
+                    if (err) {
+                        db.detach();
+                        throw err;
+                    }
+
+                    transaction.query(ssql, params, (err: any, result: any[]) => {
+                        if (err) {
+                            transaction.rollback();
+                            db.detach();
+                            return reject(this.createFirebirdError(err, { info: "Erro ao conectar ao firebird" }));
+                        }
+
+                        const arrBlob = [];
+                        for (const item of result) {
+                            const fields = Object.keys(item);
+                            for (const key of fields) {
+                                if (typeof item[key] === 'function') {
+                                    item[key] = new Promise((resolve, reject) => {
+                                        item[key](transaction, (error: any, name: any, event: any, row: any) => {
+                                            if (error) {
+                                                return reject(error);
+                                            }
+
+                                            let value = '';
+                                            event.on('data', (chunk: any) => {
+                                                value += chunk.toString('binary');
+                                            });
+                                            event.on('end', () => {
+                                                resolve({ value, column: name, row });
+                                            });
+                                        });
+                                    });
+                                    arrBlob.push(item[key]);
+                                }
+                            }
+                        }
+
+                        Promise.all(arrBlob).then((blobs) => {
+                            for (const blob of blobs) {
+                                result[blob.row][blob.column] = blob.value;
+                            }
+
+                            transaction.commit((err) => {
+                                if (err) {
+                                    transaction.rollback();
+                                    db.detach();
+                                    return;
+                                }
+
+                                db.detach();
+                                return resolve(result as T);
+                            });
+                        }).catch((err) => {
+                            transaction.rollback();
+                            db.detach();
+                            return reject(err);
+                        });
+                    });
+                });
+            });
+        }
+        )
+    };
 
     private createFirebirdError(
         error: any,

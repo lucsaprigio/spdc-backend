@@ -33,7 +33,7 @@ class FirebirdBlobService {
                         if (err) {
                             transaction.rollback();
                             db.detach();
-                            return;
+                            return reject(this.createFirebirdError(err, { info: "Erro ao conectar ao firebird" }));
                         }
 
                         const arrBlob = [];

@@ -122,6 +122,52 @@ export class NotasRepository implements INotasRepository {
         }
     }
 
+    async downloadXmlByChave(chave: string) {
+        const cacheKey = `chave:${chave}`;
+
+        const cachedXml = this.cacheProvider.get<string>(cacheKey);
+
+        if (cachedXml) {
+            return { file: cachedXml }; // Retorna do cache se existir
+        }
+
+        const sql = `
+                SELECT XML.ARQUIVO
+                FROM INDICE 
+                INNER JOIN XML ON INDICE.ITEN = XML.LANCAB
+                WHERE CHAVE = '${chave}' 
+        `
+
+        const result = await this.firebirdBlobService.executeQueryBlob<[{ ARQUIVO: string }]>(sql, []);
+
+        this.cacheProvider.set(cacheKey, result[0].ARQUIVO, 10 * 60);
+
+        return {
+            file: result[0].ARQUIVO,
+        }
+    }
+
+    async heelsReport(cnpj: string, cnpjFilial: string, month: string, year: string): Promise<{ heel: string; }> {
+        const sql = `SELECT DB_LISTA_FECHA_ITENS.TEXTO, DB_LISTA_FECHAMENTOS.MES, DB_LISTA_FECHAMENTOS.ITEN
+            FROM DB_LISTA_FECHA_ITENS
+            INNER JOIN DB_LISTA_FECHAMENTOS ON DB_LISTA_FECHA_ITENS.lancab = DB_LISTA_FECHAMENTOS.ITEN
+            WHERE DB_LISTA_FECHAMENTOS.CNPJ_FILIAL = '${cnpjFilial}' AND DB_LISTA_FECHAMENTOS.CNPJ_ORIGEM = '${cnpj}'
+            AND DB_LISTA_FECHAMENTOS.FECHADO = 'N'
+            AND DB_LISTA_FECHAMENTOS.MES = '${month}' and DB_LISTA_FECHAMENTOS.ANO = '${year}'`;
+
+        try {
+            const result = await this.firebirdService.executeQueryBlob<[{ TEXTO: string }]>(sql, []);
+
+            return {
+                heel: result[0].TEXTO
+            }
+
+        } catch (error) {
+            console.log(error);
+            throw new Error(`Erro ao consultar notas ${error}`)
+        }
+    }
+
     private countByStatus({ cnpj, type, initialDate, finalDate, e_s }: NfeSearchParams): Promise<CountResponse[]> {
         let sql = `
                 SELECT COUNT(*) FROM DB_LISTA_XML_GERAL
@@ -232,21 +278,6 @@ export class NotasRepository implements INotasRepository {
         return this.firebirdService.executeTransaction(sql, []);
     }
 
-    async downloadXmlByChave(chave: string) {
-        const sql = `
-                SELECT XML.ARQUIVO
-                FROM INDICE 
-                INNER JOIN XML ON INDICE.ITEN = XML.LANCAB
-                WHERE CHAVE = '${chave}' 
-        `
-
-        const result = await this.firebirdBlobService.executeQueryBlob<[{ ARQUIVO: string }]>(sql, []);
-
-        return {
-            file: result[0].ARQUIVO,
-        }
-    }
-
     private calculatedTotals(total: TotalByPeriodResponse[], totalCount: number, pageSize = 20) {
         const totalAut = parseFloat(total
             .filter(item => item.STATUS === 'A')
@@ -273,4 +304,6 @@ export class NotasRepository implements INotasRepository {
             pageCount
         }
     }
+
+
 }

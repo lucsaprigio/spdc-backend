@@ -9,6 +9,8 @@ import { ListNotasController } from "@/presentation/http/controllers/ListNotasCo
 import { CountNotasController } from "@/presentation/http/controllers/CountNotasController"
 import { DownloadXmlByChaveController } from "@/presentation/http/controllers/DownloadXmlByChaveController"
 import { FindByFiltersController } from "@/presentation/http/controllers/FindByFiltersController"
+import { HeelsReportUseCase } from "@/application/use-cases/heels-report-use-case"
+import { HeelsReportController } from "@/presentation/http/controllers/HeelsReportController"
 
 export const notasRepositoryFactory = () => {
     return new NotasRepository(
@@ -25,7 +27,8 @@ export const notasUseCaseFactory = () => {
         listNotasByCnpjDateUseCase: new ListNotasByCnpjDateUseCase(repository),
         countNotasByCnpjUseCase: new CountNotasByCnpjUseCase(repository),
         findByFiltersUseCase: new FindByFiltersUseCase(repository),
-        downloadXmlByChaveUseCase: new DownloadXmlByChaveUseCase(repository)
+        downloadXmlByChaveUseCase: new DownloadXmlByChaveUseCase(repository),
+        heelsReportUseCase: new HeelsReportUseCase(repository)
     }
 }
 
@@ -36,6 +39,7 @@ export const notasControllerFactory = () => {
         listNotasController: new ListNotasController(useCases.listNotasByCnpjDateUseCase),
         countNotasController: new CountNotasController(useCases.countNotasByCnpjUseCase),
         downloadXmlByChaveController: new DownloadXmlByChaveController(useCases.downloadXmlByChaveUseCase),
-        findByFiltersController: new FindByFiltersController(useCases.findByFiltersUseCase)
+        findByFiltersController: new FindByFiltersController(useCases.findByFiltersUseCase),
+        heelsReportController: new HeelsReportController(useCases.heelsReportUseCase)
     }
 }
