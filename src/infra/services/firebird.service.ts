@@ -57,19 +57,21 @@ class FirebirdService {
             firebird.attachOrCreate(this.options, (err, db) => {
                 try {
                     if (err) {
+                        db.detach();
                         return reject(this.createFirebirdError(err, { info: "Erro ao conectar ao firebird" }));
                     }
 
                     db.query(query, params, (err, result) => {
                         if (err) {
+                            db.detach();
                             return reject(this.createFirebirdError(err, { info: "Erro ao executar a query" }));
                         }
-
+                        db.detach();
                         return resolve(result as [])
                     })
 
-                } finally {
-                    db.detach();
+                } catch (error) {
+                    return reject(this.createFirebirdError(err, { info: `${error}` }));
                 }
             })
         })

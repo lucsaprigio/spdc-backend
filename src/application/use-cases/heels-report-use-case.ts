@@ -24,8 +24,12 @@ export class HeelsReportUseCase {
 
         const blob = await this.notasRepository.heelsReport(cnpj, cnpjFilial, month, year);
 
+        if (!blob.heel) {
+            throw new AppError('Relatório não encontrado', 401)
+        }
+
         const decoded = Buffer
-            .from(blob.heel, 'binary')
+            .from(blob.heel as string, 'binary')
             .toString('utf8')
             .replace(/\r\n/g, '<br/>')
             .replace(/ {2}/g, '&nbsp;&nbsp;');

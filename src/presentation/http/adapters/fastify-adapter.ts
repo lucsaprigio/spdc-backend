@@ -1,4 +1,5 @@
 import { IController } from "@/application/repositories/IController";
+import { AppError } from "@/core/shared/errors/AppError";
 import { FastifyReply, FastifyRequest } from "fastify";
 
 interface IHttpRequest {
@@ -59,8 +60,15 @@ export class FastifyAdapter {
 
     private handleError(error: unknown, reply: FastifyReply) {
         console.error('Adapter error: ', error);
-        reply.status(500).send({
-            error: error instanceof Error ? error.message : 'Internal Server Error'
-        })
+        if (error instanceof AppError) {
+            reply.status(error.statusCode).send({
+                error: error.message,
+                statusCode: error.statusCode
+            })
+        } else {
+            reply.status(500).send({
+                error: 'Internal server Error',
+            })
+        }
     }
 }

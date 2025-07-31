@@ -147,7 +147,7 @@ export class NotasRepository implements INotasRepository {
         }
     }
 
-    async heelsReport(cnpj: string, cnpjFilial: string, month: string, year: string): Promise<{ heel: string; }> {
+    async heelsReport(cnpj: string, cnpjFilial: string, month: string, year: string): Promise<{ heel: string | null; }> {
         const sql = `SELECT DB_LISTA_FECHA_ITENS.TEXTO, DB_LISTA_FECHAMENTOS.MES, DB_LISTA_FECHAMENTOS.ITEN
             FROM DB_LISTA_FECHA_ITENS
             INNER JOIN DB_LISTA_FECHAMENTOS ON DB_LISTA_FECHA_ITENS.lancab = DB_LISTA_FECHAMENTOS.ITEN
@@ -155,16 +155,14 @@ export class NotasRepository implements INotasRepository {
             AND DB_LISTA_FECHAMENTOS.FECHADO = 'N'
             AND DB_LISTA_FECHAMENTOS.MES = '${month}' and DB_LISTA_FECHAMENTOS.ANO = '${year}'`;
 
-        try {
-            const result = await this.firebirdService.executeQueryBlob<[{ TEXTO: string }]>(sql, []);
+        const result = await this.firebirdService.executeQueryBlob<[{ TEXTO: string | null }]>(sql, []);
 
-            return {
-                heel: result[0].TEXTO
-            }
+        if (!result || result.length <= 0) {
+            return { heel: null }
+        }
 
-        } catch (error) {
-            console.log(error);
-            throw new Error(`Erro ao consultar notas ${error}`)
+        return {
+            heel: result[0].TEXTO
         }
     }
 
