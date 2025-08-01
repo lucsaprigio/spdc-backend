@@ -154,7 +154,7 @@ export class NotasRepository implements INotasRepository {
             WHERE DB_LISTA_FECHAMENTOS.CNPJ_FILIAL = '${cnpjFilial}' AND DB_LISTA_FECHAMENTOS.CNPJ_ORIGEM = '${cnpj}'
             AND DB_LISTA_FECHAMENTOS.FECHADO = 'N'
             AND DB_LISTA_FECHAMENTOS.MES = '${month}' and DB_LISTA_FECHAMENTOS.ANO = '${year}'`;
-
+ 
         const result = await this.firebirdService.executeQueryBlob<[{ TEXTO: string | null }]>(sql, []);
 
         if (!result || result.length <= 0) {
